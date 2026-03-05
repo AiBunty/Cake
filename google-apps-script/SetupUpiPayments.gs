@@ -26,6 +26,16 @@ function setupUpiPaymentSupport() {
 }
 
 function ensureOrdersUpiColumns(sheet) {
+  if (!sheet) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    sheet = ss ? ss.getSheetByName('Orders') : null;
+  }
+
+  if (!sheet) {
+    Logger.log('❌ Orders sheet not found');
+    return;
+  }
+
   const requiredColumns = [
     'payment_method',
     'upi_utr',
@@ -57,6 +67,15 @@ function ensureOrdersUpiColumns(sheet) {
 }
 
 function ensureUpiPaymentsSheet(ss) {
+  if (!ss) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+
+  if (!ss) {
+    Logger.log('❌ Active spreadsheet not found');
+    return;
+  }
+
   let sheet = ss.getSheetByName('UPIPayments');
 
   if (!sheet) {
@@ -75,10 +94,21 @@ function ensureUpiPaymentsSheet(ss) {
 }
 
 function ensureUpiSettings(sheet) {
+  if (!sheet) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    sheet = ss ? ss.getSheetByName('Settings') : null;
+  }
+
+  if (!sheet) {
+    Logger.log('❌ Settings sheet not found');
+    return;
+  }
+
   const requiredSettings = {
     upi_vpa: 'your-upi-id@bank',
     upi_payee_name: 'Cake Studio',
     upi_screenshot_folder_id: '',
+    admin_panel_key: '',
   };
 
   const data = sheet.getDataRange().getValues();

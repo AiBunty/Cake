@@ -67,6 +67,21 @@ export default function Navbar() {
               <span className="hidden sm:inline">Track Orders</span>
             </Link>
 
+            <Link
+              href="/admin-upi"
+              className="text-text hover:text-rose transition-colors font-medium"
+            >
+              <span className="hidden sm:inline">UPI Admin</span>
+              <span className="sm:hidden">Admin</span>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="text-text hover:text-rose transition-colors font-medium"
+            >
+              <span className="hidden sm:inline">Panel</span>
+            </Link>
+
             {settings?.instagram_url && (
               <a
                 href={settings.instagram_url}

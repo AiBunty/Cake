@@ -137,6 +137,18 @@ function doPost(e) {
         return handleUpiPaymentSubmit(payload);
       case 'upi_mark_verified':
         return handleUpiMarkVerified(payload);
+      case 'admin_products_list':
+        return handleAdminProductsList(payload);
+      case 'admin_product_upsert':
+        return handleAdminProductUpsert(payload);
+      case 'admin_product_delete':
+        return handleAdminProductDelete(payload);
+      case 'admin_orders_list':
+        return handleAdminOrdersList(payload);
+      case 'admin_settings_list':
+        return handleAdminSettingsList(payload);
+      case 'admin_settings_upsert':
+        return handleAdminSettingsUpsert(payload);
       case 'crm_push_order':
         return handleCrmPushOrder(e.parameter.order_id);
       case 'crm_push_booking':
@@ -207,6 +219,22 @@ function parseBoolean(value) {
   }
 
   return false;
+}
+
+function validateAdminAccess(payload) {
+  const settings = getSettings();
+  const configuredAdminKey = settings.admin_panel_key ? settings.admin_panel_key.toString().trim() : '';
+
+  if (!configuredAdminKey) {
+    return { ok: true };
+  }
+
+  const providedKey = payload && payload.admin_key ? payload.admin_key.toString().trim() : '';
+  if (!providedKey || providedKey !== configuredAdminKey) {
+    return { ok: false, error: 'Invalid admin key' };
+  }
+
+  return { ok: true };
 }
 
 // ============================================================================
@@ -368,6 +396,171 @@ function handleGetOrdersByCustomer(email, phone) {
   });
   
   return jsonResponse(true, orders);
+}
+
+function handleAdminProductsList(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  return handleGetProducts();
+}
+
+function handleAdminProductUpsert(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  if (!payload || !payload.product || !payload.product.id) {
+    return jsonResponse(false, null, 'Invalid payload', 'product with id is required');
+  }
+
+  const product = payload.product;
+  const sheet = getSheet('Products');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Products sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const values = [
+    product.id.toString().trim(),
+    product.name || '',
+    product.description || '',
+    parseFloat(product.price_inr) || 0,
+    product.image_url || '',
+    product.category || 'Other',
+    parseBoolean(product.is_available),
+    parseInt(product.sort_order, 10) || 0,
+    product.allowed_toppings || '',
+  ];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === values[0]) {
+      sheet.getRange(i + 1, 1, 1, values.length).setValues([values]);
+      return jsonResponse(true, { id: values[0], action: 'updated' });
+    }
+  }
+
+  sheet.appendRow(values);
+  return jsonResponse(true, { id: values[0], action: 'created' });
+}
+
+function handleAdminProductDelete(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  if (!payload || !payload.id) {
+    return jsonResponse(false, null, 'Invalid payload', 'id is required');
+  }
+
+  const id = payload.id.toString();
+  const sheet = getSheet('Products');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Products sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === id) {
+      sheet.deleteRow(i + 1);
+      return jsonResponse(true, { id: id, action: 'deleted' });
+    }
+  }
+
+  return jsonResponse(false, null, 'Product not found');
+}
+
+function handleAdminOrdersList(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  const limit = (payload && payload.limit) ? parseInt(payload.limit, 10) : 200;
+  const sheet = getSheet('Orders');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Orders sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const orders = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    orders.push({
+      order_id: data[i][0].toString(),
+      created_at: data[i][1] ? new Date(data[i][1]).toISOString() : '',
+      customer_name: data[i][2],
+      phone: data[i][3],
+      email: data[i][4],
+      pickup_date: formatDate(data[i][5]),
+      pickup_slot_label: data[i][6],
+      pickup_start_time: data[i][7],
+      pickup_end_time: data[i][8],
+      pickup_timezone: data[i][9] || 'Asia/Kolkata',
+      cart_json: data[i][10],
+      subtotal_inr: parseFloat(data[i][11]) || 0,
+      payment_status: data[i][12] || 'CREATED',
+      notes: data[i][21] || '',
+      payment_method: data[i][22] || 'RAZORPAY',
+      upi_utr: data[i][23] || '',
+      upi_status: data[i][24] || '',
+      upi_screenshot_url: data[i][25] || '',
+      upi_submitted_at: data[i][26] || '',
+    });
+  }
+
+  orders.sort(function (a, b) {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  return jsonResponse(true, orders.slice(0, Math.max(1, limit)));
+}
+
+function handleAdminSettingsList(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  return jsonResponse(true, getSettings());
+}
+
+function handleAdminSettingsUpsert(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  if (!payload || !payload.key) {
+    return jsonResponse(false, null, 'Invalid payload', 'key is required');
+  }
+
+  const key = payload.key.toString().trim();
+  const value = payload.value === undefined || payload.value === null ? '' : payload.value.toString();
+  if (!key) {
+    return jsonResponse(false, null, 'Invalid payload', 'key cannot be empty');
+  }
+
+  const sheet = getSheet('Settings');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Settings sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === key) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      return jsonResponse(true, { key: key, value: value, action: 'updated' });
+    }
+  }
+
+  sheet.appendRow([key, value]);
+  return jsonResponse(true, { key: key, value: value, action: 'created' });
 }
 
 function handleCreateOrder(payload) {

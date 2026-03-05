@@ -201,3 +201,45 @@ export const getOrdersByCustomer = async (email?: string, phone?: string) => {
     params,
   });
 };
+
+export const adminListProducts = async (admin_key: string) => {
+  return appsScriptFetch("admin_products_list", {
+    method: "POST",
+    body: JSON.stringify({ admin_key }),
+  });
+};
+
+export const adminUpsertProduct = async (admin_key: string, product: unknown) => {
+  return appsScriptFetch("admin_product_upsert", {
+    method: "POST",
+    body: JSON.stringify({ admin_key, product }),
+  });
+};
+
+export const adminDeleteProduct = async (admin_key: string, id: string) => {
+  return appsScriptFetch("admin_product_delete", {
+    method: "POST",
+    body: JSON.stringify({ admin_key, id }),
+  });
+};
+
+export const adminListOrders = async (admin_key: string, limit = 200) => {
+  return appsScriptFetch("admin_orders_list", {
+    method: "POST",
+    body: JSON.stringify({ admin_key, limit }),
+  });
+};
+
+export const adminListSettings = async (admin_key: string) => {
+  return appsScriptFetch("admin_settings_list", {
+    method: "POST",
+    body: JSON.stringify({ admin_key }),
+  });
+};
+
+export const adminUpsertSetting = async (admin_key: string, key: string, value: string) => {
+  return appsScriptFetch("admin_settings_upsert", {
+    method: "POST",
+    body: JSON.stringify({ admin_key, key, value }),
+  });
+};

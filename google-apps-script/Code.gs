@@ -35,8 +35,40 @@ const CONFIG = {
 // ============================================================================
 
 function doGet(e) {
-  if (!validateApiKey(e)) {
-    return jsonResponse(false, null, 'Unauthorized', 'Invalid API key');
+  if (!e || !e.parameter) {
+    return jsonResponse(
+      false,
+      null,
+      'Invalid request context',
+      'doGet must be invoked by an HTTP request with query parameters'
+    );
+  }
+
+  // Log incoming request for debugging
+  Logger.log('doGet called with parameters: ' + JSON.stringify(e.parameter));
+  
+  // Special debug route to check API key status
+  if (e.parameter.route === 'debug_status') {
+    return jsonResponse(true, {
+      api_key_configured: !!CONFIG.API_KEY,
+      sheet_id: CONFIG.SHEET_ID,
+      timestamp: new Date().toISOString(),
+      message: CONFIG.API_KEY ? 'API key is configured' : 'API key is NOT configured (setup mode)'
+    });
+  }
+  
+  // Check API key - but allow requests without it during setup
+  const apiKeyStatus = validateApiKey(e);
+  
+  if (apiKeyStatus.valid === false && CONFIG.API_KEY) {
+    // API key is configured and validation failed
+    Logger.log('API key validation failed: ' + apiKeyStatus.reason);
+    return jsonResponse(false, null, 'Unauthorized', apiKeyStatus.reason);
+  }
+  
+  // Either no validation needed or validation passed
+  if (!apiKeyStatus.valid && !CONFIG.API_KEY) {
+    Logger.log('Warning: No API key configured - operating in setup mode');
   }
 
   const route = e.parameter.route;
@@ -51,6 +83,8 @@ function doGet(e) {
         return handleGetToppings();
       case 'settings':
         return handleGetSettings();
+      case 'orders_by_customer':
+        return handleGetOrdersByCustomer(e.parameter.email, e.parameter.phone);
       default:
         return jsonResponse(false, null, 'Unknown route', route);
     }
@@ -61,8 +95,30 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  if (!validateApiKey(e)) {
-    return jsonResponse(false, null, 'Unauthorized', 'Invalid API key');
+  if (!e || !e.parameter || !e.postData || !e.postData.contents) {
+    return jsonResponse(
+      false,
+      null,
+      'Invalid request context',
+      'doPost must be invoked by an HTTP POST request with JSON body'
+    );
+  }
+
+  // Log incoming request for debugging
+  Logger.log('doPost called with route: ' + e.parameter.route);
+  
+  // Check API key - but allow requests without it during setup
+  const apiKeyStatus = validateApiKey(e);
+  
+  if (apiKeyStatus.valid === false && CONFIG.API_KEY) {
+    // API key is configured and validation failed
+    Logger.log('API key validation failed: ' + apiKeyStatus.reason);
+    return jsonResponse(false, null, 'Unauthorized', apiKeyStatus.reason);
+  }
+  
+  // Either no validation needed or validation passed
+  if (!apiKeyStatus.valid && !CONFIG.API_KEY) {
+    Logger.log('Warning: No API key configured - operating in setup mode');
   }
 
   const route = e.parameter.route;
@@ -93,15 +149,58 @@ function doPost(e) {
 // ============================================================================
 
 function validateApiKey(e) {
-  const providedKey = e.parameter['x-api-key'] || (e.postData && e.postData.headers && e.postData.headers['x-api-key']);
   const configuredKey = CONFIG.API_KEY;
+  const parameters = (e && e.parameter) ? e.parameter : {};
   
+  // If no API key is configured, allow all requests (setup mode)
   if (!configuredKey) {
-    Logger.log('Warning: No API key configured');
-    return true; // If no key configured, allow (for initial setup)
+    Logger.log('ℹ️ Setup mode: No API key configured. Accepting all requests.');
+    return { valid: true, reason: 'No key configured' };
   }
   
-  return providedKey === configuredKey;
+  // API key is configured, check the incoming request
+  const providedKey = 
+    parameters['x-api-key'] ||
+    parameters['api_key'] ||
+    (e.postData &&
+      e.postData.headers &&
+      (e.postData.headers['x-api-key'] ||
+        e.postData.headers['X-API-KEY'] ||
+        e.postData.headers['api_key']));
+  
+  if (!providedKey) {
+    Logger.log('❌ API key required but not provided');
+    return { valid: false, reason: 'API key required' };
+  }
+  
+  if (providedKey !== configuredKey) {
+    Logger.log('❌ Invalid API key provided');
+    return { valid: false, reason: 'Invalid API key' };
+  }
+  
+  Logger.log('✅ API key validated successfully');
+  return { valid: true, reason: 'Valid key' };
+}
+
+function parseBoolean(value) {
+  if (value === true) return true;
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return (
+      normalized === 'true' ||
+      normalized === '1' ||
+      normalized === 'yes' ||
+      normalized === 'y' ||
+      normalized === 'on'
+    );
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  return false;
 }
 
 // ============================================================================
@@ -188,7 +287,7 @@ function handleGetToppings() {
       description: row[2],
       price_inr: parseFloat(row[3]) || 0,
       icon_emoji: row[4],
-      is_available: row[5] === true || row[5] === 'TRUE',
+      is_available: parseBoolean(row[5]),
       sort_order: parseInt(row[6]) || 0,
     };
     toppings.push(topping);
@@ -202,7 +301,73 @@ function handleGetSettings() {
   return jsonResponse(true, settings);
 }
 
+function handleGetOrdersByCustomer(email, phone) {
+  if (!email && !phone) {
+    return jsonResponse(false, null, 'Email or phone parameter required');
+  }
+  
+  const sheet = getSheet('Orders');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Orders sheet not found');
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const orders = [];
+  
+  // Skip header row, iterate through all orders
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue; // Skip empty rows
+    
+    const orderEmail = row[4] ? row[4].toString().trim().toLowerCase() : '';
+    const orderPhone = row[3] ? row[3].toString().trim() : '';
+    const searchEmail = email ? email.trim().toLowerCase() : '';
+    const searchPhone = phone ? phone.trim() : '';
+    
+    // Match by email or phone
+    const emailMatch = searchEmail && orderEmail === searchEmail;
+    const phoneMatch = searchPhone && orderPhone === searchPhone;
+    
+    if (emailMatch || phoneMatch) {
+      const order = {
+        order_id: row[0].toString(),
+        created_at: row[1] ? new Date(row[1]).toISOString() : '',
+        customer_name: row[2],
+        phone: row[3],
+        email: row[4],
+        pickup_date: formatDate(row[5]),
+        pickup_slot_label: row[6],
+        pickup_start_time: row[7],
+        pickup_end_time: row[8],
+        pickup_timezone: row[9] || 'Asia/Kolkata',
+        cart_json: row[10],
+        subtotal_inr: parseFloat(row[11]) || 0,
+        payment_status: row[12] || 'CREATED',
+        razorpay_order_id: row[13] || '',
+        razorpay_payment_id: row[14] || '',
+        notes: row[21] || '',
+      };
+      orders.push(order);
+    }
+  }
+  
+  // Sort by created_at descending (newest first)
+  orders.sort((a, b) => {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+  
+  return jsonResponse(true, orders);
+}
+
 function handleCreateOrder(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return jsonResponse(false, null, 'Invalid payload', 'Order payload is required');
+  }
+
+  if (!payload.pickup_date || !payload.pickup_slot_label) {
+    return jsonResponse(false, null, 'Missing required fields', 'pickup_date and pickup_slot_label are required');
+  }
+
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   
@@ -260,6 +425,10 @@ function handleCreateOrder(payload) {
 }
 
 function handleMarkOrderPaid(payload) {
+  if (!payload || !payload.order_id) {
+    return jsonResponse(false, null, 'Invalid payload', 'order_id is required');
+  }
+
   const sheet = getSheet('Orders');
   const data = sheet.getDataRange().getValues();
   
@@ -393,6 +562,14 @@ function sendToCRM(url, payload) {
 }
 
 function buildOrderCrmPayload(order) {
+  if (!order || typeof order !== 'object') {
+    throw new Error('Order is required to build CRM payload');
+  }
+
+  if (!order.customer_name) {
+    throw new Error('Order customer_name is required');
+  }
+
   const names = splitName(order.customer_name);
   const pickupDateTime = new Date(order.pickup_date + 'T' + order.pickup_start_time);
   const timeFields = buildTimeFields(pickupDateTime);
@@ -448,6 +625,14 @@ function buildOrderCrmPayload(order) {
 }
 
 function buildBookingCrmPayload(booking) {
+  if (!booking || typeof booking !== 'object') {
+    throw new Error('Booking is required to build CRM payload');
+  }
+
+  if (!booking.customer_name) {
+    throw new Error('Booking customer_name is required');
+  }
+
   const names = splitName(booking.customer_name);
   const bookingDateTime = new Date(booking.required_date + 'T' + booking.required_start_time);
   const timeFields = buildTimeFields(bookingDateTime);
@@ -503,6 +688,14 @@ function buildBookingCrmPayload(booking) {
 }
 
 function buildTimeFields(dateTime) {
+  if (!dateTime) {
+    throw new Error('dateTime is required to build time fields');
+  }
+
+  if (!(dateTime instanceof Date) || isNaN(dateTime.getTime())) {
+    throw new Error('Invalid dateTime provided to buildTimeFields');
+  }
+
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   
@@ -577,6 +770,10 @@ function syncCalendarBookings() {
 }
 
 function syncCalendarEvent(event) {
+  if (!event || typeof event.getId !== 'function') {
+    throw new Error('Valid calendar event is required');
+  }
+
   const eventId = event.getId();
   const sheet = getSheet('CalendarBookings');
   const data = sheet.getDataRange().getValues();

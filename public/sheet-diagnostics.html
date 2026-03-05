@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sheet Diagnostics</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #0f172a; color: #e2e8f0; }
+    h1 { margin-bottom: 6px; }
+    .muted { color: #94a3b8; margin-bottom: 16px; }
+    .card { background: #111827; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, button { padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1220; color: #e2e8f0; }
+    input { min-width: 220px; }
+    button { cursor: pointer; background: #1d4ed8; border-color: #1d4ed8; }
+    button:hover { background: #1e40af; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: left; font-size: 14px; vertical-align: top; }
+    th { background: #0b1220; }
+    .ok { color: #22c55e; font-weight: 700; }
+    .fail { color: #ef4444; font-weight: 700; }
+    .warn { color: #f59e0b; font-weight: 700; }
+    pre { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; overflow: auto; max-height: 340px; }
+  </style>
+</head>
+<body>
+  <h1>Google Sheet Tabs Diagnostic</h1>
+  <div class="muted">Tests data fetch via <code>/api/apps-script</code> and logs route-level errors.</div>
+
+  <div class="card">
+    <div class="row">
+      <input id="date" type="date" />
+      <input id="email" type="email" placeholder="Customer email (for Orders tab test)" />
+      <input id="phone" type="text" placeholder="Customer phone (for Orders tab test)" />
+      <button id="runBtn">Run Diagnostics</button>
+    </div>
+    <div class="muted" style="margin-top:10px;">Orders tab test requires <strong>email</strong> or <strong>phone</strong>. CalendarBookings has no public GET route in current API.</div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Tab / Route</th>
+          <th>Status</th>
+          <th>HTTP</th>
+          <th>Rows</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Error / Debug Logs</h3>
+    <pre id="logBox">Ready. Click "Run Diagnostics".</pre>
+  </div>
+
+  <script>
+    const logBox = document.getElementById('logBox');
+    const resultsBody = document.getElementById('resultsBody');
+    const runBtn = document.getElementById('runBtn');
+
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('date').value = today;
+
+    function log(message, data) {
+      const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+      if (data !== undefined) {
+        logBox.textContent += `\n${line}\n${safeStringify(data)}`;
+      } else {
+        logBox.textContent += `\n${line}`;
+      }
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function safeStringify(value) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    }
+
+    function addRow(name, status, http, rows, message) {
+      const tr = document.createElement('tr');
+      const statusClass = status === 'PASS' ? 'ok' : status === 'SKIP' ? 'warn' : 'fail';
+      tr.innerHTML = `
+        <td>${name}</td>
+        <td class="${statusClass}">${status}</td>
+        <td>${http ?? '-'}</td>
+        <td>${rows ?? '-'}</td>
+        <td>${message ?? '-'}</td>
+      `;
+      resultsBody.appendChild(tr);
+    }
+
+    async function testRoute(name, query) {
+      const url = `/api/apps-script?${query}`;
+      log(`Testing ${name}: ${url}`);
+
+      try {
+        const res = await fetch(url, { method: 'GET' });
+        const text = await res.text();
+        let json;
+
+        try {
+          json = JSON.parse(text);
+        } catch {
+          json = null;
+        }
+
+        if (!res.ok) {
+          addRow(name, 'FAIL', res.status, '-', `HTTP error ${res.status}`);
+          log(`${name} failed with HTTP ${res.status}`, { bodyPreview: text.slice(0, 300) });
+          return;
+        }
+
+        if (!json || typeof json !== 'object') {
+          addRow(name, 'FAIL', res.status, '-', 'Non-JSON response');
+          log(`${name} returned non-JSON`, { bodyPreview: text.slice(0, 300) });
+          return;
+        }
+
+        if (!json.ok) {
+          addRow(name, 'FAIL', res.status, '-', json.error || 'API returned ok=false');
+          log(`${name} API error`, json);
+          return;
+        }
+
+        const data = json.data;
+        const rows = Array.isArray(data) ? data.length : (data && typeof data === 'object' ? Object.keys(data).length : 1);
+        addRow(name, 'PASS', res.status, rows, 'Data fetched');
+        log(`${name} success`, { rows, sample: Array.isArray(data) ? data.slice(0, 1) : data });
+      } catch (error) {
+        addRow(name, 'FAIL', '-', '-', error.message || 'Request failed');
+        log(`${name} exception`, { message: error.message, stack: error.stack });
+      }
+    }
+
+    async function runDiagnostics() {
+      resultsBody.innerHTML = '';
+      logBox.textContent = 'Starting diagnostics...';
+
+      const date = document.getElementById('date').value || today;
+      const email = (document.getElementById('email').value || '').trim();
+      const phone = (document.getElementById('phone').value || '').trim();
+
+      await testRoute('Products tab (route=products)', 'route=products');
+      await testRoute('Toppings tab (route=toppings)', 'route=toppings');
+      await testRoute('TimeSlots tab (route=timeslots)', `route=timeslots&date=${encodeURIComponent(date)}`);
+      await testRoute('Settings tab (route=settings)', 'route=settings');
+      await testRoute('Debug status (route=debug_status)', 'route=debug_status');
+
+      if (email || phone) {
+        const query = `route=orders_by_customer${email ? `&email=${encodeURIComponent(email)}` : ''}${phone ? `&phone=${encodeURIComponent(phone)}` : ''}`;
+        await testRoute('Orders tab (route=orders_by_customer)', query);
+      } else {
+        addRow('Orders tab (route=orders_by_customer)', 'SKIP', '-', '-', 'Provide email or phone');
+        log('Orders tab test skipped: email/phone missing');
+      }
+
+      addRow('CalendarBookings tab', 'SKIP', '-', '-', 'No public GET route in current API');
+      log('CalendarBookings skipped: no route implemented in Code.gs');
+
+      log('Diagnostics complete.');
+    }
+
+    runBtn.addEventListener('click', runDiagnostics);
+  </script>
+</body>
+</html>

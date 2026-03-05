@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, CalendarCheck } from "lucide-react";
+import { ShoppingCart, CalendarCheck, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCartCount } from "@/lib/cart";
 import { motion } from "framer-motion";
@@ -57,6 +57,14 @@ export default function Navbar() {
             >
               <CalendarCheck size={20} />
               <span className="hidden sm:inline">Book a Slot</span>
+            </Link>
+
+            <Link
+              href="/track-orders"
+              className="flex items-center gap-2 text-text hover:text-rose transition-colors font-medium"
+            >
+              <Package size={20} />
+              <span className="hidden sm:inline">Track Orders</span>
             </Link>
 
             {settings?.instagram_url && (

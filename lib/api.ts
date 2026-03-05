@@ -169,3 +169,21 @@ export const markOrderPaid = async (paymentData: unknown) => {
     body: JSON.stringify(paymentData),
   });
 };
+
+export const getOrdersByCustomer = async (email?: string, phone?: string) => {
+  if (!email && !phone) {
+    return {
+      ok: false,
+      error: "Email or phone is required to retrieve orders",
+    };
+  }
+
+  const params: Record<string, string> = {};
+  if (email) params.email = email;
+  if (phone) params.phone = phone;
+
+  return appsScriptFetch("orders_by_customer", {
+    method: "GET",
+    params,
+  });
+};

@@ -12,6 +12,10 @@ const buildTargetUrl = (request: NextRequest) => {
     targetUrl.searchParams.set(key, value);
   });
 
+  if (APPS_SCRIPT_API_KEY && !targetUrl.searchParams.has("x-api-key")) {
+    targetUrl.searchParams.set("x-api-key", APPS_SCRIPT_API_KEY);
+  }
+
   return targetUrl.toString();
 };
 

@@ -30,13 +30,23 @@ export default function ToppingsModal({
   const allowedToppings = allToppings.filter((topping) => {
     if (!product.allowed_toppings || !topping.is_available) return false;
     
-    // Split by space or comma and normalize
+    // Split by space/comma/semicolon/pipe and normalize
     const allowedIds = product.allowed_toppings
-      .split(/[\s,]+/)
+      .split(/[\s,;|]+/)
       .map(id => id.trim().toLowerCase())
       .filter(id => id.length > 0);
     
     return allowedIds.includes(topping.id.toLowerCase());
+  });
+
+  // Debug logging
+  console.log('🔍 Toppings Modal Debug:', {
+    productName: product.name,
+    productAllowedToppings: product.allowed_toppings,
+    allToppingsCount: allToppings.length,
+    allToppingsIds: allToppings.map(t => t.id),
+    allowedToppingsCount: allowedToppings.length,
+    allowedToppingsIds: allowedToppings.map(t => t.id)
   });
 
   // Calculate total price

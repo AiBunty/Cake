@@ -95,16 +95,18 @@ export default function Home() {
                 for same-day pickup or book a consultation to create your dream cake.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
-                <Button variant="primary" className="group text-lg px-8 py-4">
-                  <span>Order Now</span>
-                  <ChevronRight
-                    size={20}
-                    className="ml-2 group-hover:translate-x-1 transition-transform"
-                  />
-                </Button>
-                <Link href="/book">
-                  <Button variant="gradientBorder" className="text-lg px-8 py-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 sm:items-stretch">
+                <Link href="/" className="w-full sm:w-auto">
+                  <Button variant="primary" className="group text-lg px-8 py-4 w-full sm:w-auto h-full flex items-center justify-center gap-2">
+                    <span>Order Now</span>
+                    <ChevronRight
+                      size={20}
+                      className="group-hover:translate-x-1 transition-transform"
+                    />
+                  </Button>
+                </Link>
+                <Link href="/book" className="w-full sm:w-auto">
+                  <Button variant="gradientBorder" className="text-lg px-8 py-4 w-full sm:w-auto h-full flex items-center justify-center">
                     Book a Consultation
                   </Button>
                 </Link>

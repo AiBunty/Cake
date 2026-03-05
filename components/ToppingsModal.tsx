@@ -120,36 +120,36 @@ export default function ToppingsModal({
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="glass-panel rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden pointer-events-auto"
+              className="glass-panel rounded-3xl max-w-2xl w-full max-h-[95vh] overflow-hidden pointer-events-auto flex flex-col my-auto"
             >
               {/* Header */}
-              <div className="border-b border-white/10 p-6 flex items-start justify-between">
+              <div className="border-b border-white/10 p-4 sm:p-6 flex items-start justify-between flex-shrink-0">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-display font-bold gradient-text mb-2">
+                  <h2 className="text-xl sm:text-2xl font-display font-bold gradient-text mb-1 sm:mb-2">
                     Customize Your Order
                   </h2>
-                  <p className="text-muted text-sm">
+                  <p className="text-muted text-xs sm:text-sm">
                     {product.name} • {formatCurrency(product.price_inr)}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-muted hover:text-text transition-colors p-2 hover:bg-white/5 rounded-lg"
+                  className="text-muted hover:text-text transition-colors p-2 hover:bg-white/5 rounded-lg flex-shrink-0"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="overflow-y-auto max-h-[60vh] p-6 space-y-6">
+              <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-6">
                 {/* Product Info */}
-                <div className="flex gap-4 p-4 rounded-2xl bg-gradient-to-br from-rose/5 to-violet/5">
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+                <div className="flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-rose/5 to-violet/5">
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0">
                     <Image
                       src={product.image_url}
                       alt={product.name}
@@ -158,8 +158,8 @@ export default function ToppingsModal({
                     />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-text mb-1">{product.name}</h3>
-                    <p className="text-sm text-muted line-clamp-2">{product.description}</p>
+                    <h3 className="font-semibold text-text text-sm sm:text-base mb-1">{product.name}</h3>
+                    <p className="text-xs sm:text-sm text-muted line-clamp-2">{product.description}</p>
                   </div>
                 </div>
 
@@ -193,7 +193,7 @@ export default function ToppingsModal({
                 {allowedToppings.length > 0 ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-semibold text-text block mb-1">
+                      <label className="text-xs sm:text-sm font-semibold text-text block mb-1">
                         Add Toppings (Optional)
                       </label>
                       <p className="text-xs text-muted">
@@ -216,15 +216,15 @@ export default function ToppingsModal({
                           >
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-3 flex-1">
-                                <span className="text-2xl">{topping.icon_emoji}</span>
+                                <span className="text-xl sm:text-2xl">{topping.icon_emoji}</span>
                                 <div className="flex-1">
-                                  <h4 className="font-semibold text-text flex items-center gap-2">
+                                  <h4 className="font-semibold text-text flex items-center gap-2 text-sm sm:text-base">
                                     {topping.name}
-                                    <span className="text-sm text-rose font-normal">
+                                    <span className="text-xs sm:text-sm text-rose font-normal">
                                       +{formatCurrency(topping.price_inr)}
                                     </span>
                                   </h4>
-                                  <p className="text-xs text-muted">{topping.description}</p>
+                                  <p className="text-xs text-muted line-clamp-1">{topping.description}</p>
                                 </div>
                               </div>
                             </div>
@@ -262,10 +262,10 @@ export default function ToppingsModal({
               </div>
 
               {/* Footer */}
-              <div className="border-t border-white/10 p-6 space-y-4">
-                <div className="flex items-center justify-between text-lg">
+              <div className="border-t border-white/10 p-4 sm:p-6 space-y-3 flex-shrink-0">
+                <div className="flex items-center justify-between text-sm sm:text-lg">
                   <span className="font-semibold text-text">Total</span>
-                  <span className="text-2xl font-bold gradient-text">
+                  <span className="text-lg sm:text-2xl font-bold gradient-text">
                     {formatCurrency(calculateTotal())}
                   </span>
                 </div>
@@ -273,9 +273,9 @@ export default function ToppingsModal({
                 <Button
                   variant="primary"
                   onClick={handleAddToCart}
-                  className="w-full py-4 text-lg group"
+                  className="w-full py-3 sm:py-4 text-sm sm:text-base group"
                 >
-                  <ShoppingCart size={20} className="mr-2" />
+                  <ShoppingCart size={18} className="mr-2" />
                   <span>Add to Cart</span>
                 </Button>
               </div>

@@ -21,7 +21,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className={`${baseStyles} ${hoverStyles} ${glowStyles} ${className}`}
-        {...props}
+        {...(props as any)}
       >
         {children}
       </motion.div>

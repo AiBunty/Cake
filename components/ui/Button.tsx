@@ -28,7 +28,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         whileTap={{ scale: 0.99 }}
         className={`${baseStyles} ${variants[variant]} ${className}`}
         disabled={isLoading || props.disabled}
-        {...props}
+        {...(props as any)}
       >
         {isLoading ? (
           <span className="flex items-center gap-2 justify-center">

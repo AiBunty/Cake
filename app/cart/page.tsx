@@ -72,13 +72,13 @@ export default function CartPage() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cart.items.map((item) => (
+              {cart.items.map((item, index) => (
                 <motion.div
-                  key={item.product.id}
+                  key={`${item.product.id}-${index}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                 >
-                  <CartItemCard item={item} onUpdate={handleUpdate} />
+                  <CartItemCard item={item} itemIndex={index} onUpdate={handleUpdate} />
                 </motion.div>
               ))}
             </div>

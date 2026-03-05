@@ -4,29 +4,46 @@ import { CartItem } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { updateQuantity, removeFromCart } from "@/lib/cart";
+import { updateQuantityByIndex, removeFromCartByIndex } from "@/lib/cart";
 
 interface CartItemCardProps {
   item: CartItem;
+  itemIndex: number;
   onUpdate: () => void;
 }
 
-export default function CartItemCard({ item, onUpdate }: CartItemCardProps) {
+export default function CartItemCard({ item, itemIndex, onUpdate }: CartItemCardProps) {
   const handleIncrease = () => {
-    updateQuantity(item.product.id, item.quantity + 1);
+    updateQuantityByIndex(itemIndex, item.quantity + 1);
     onUpdate();
   };
 
   const handleDecrease = () => {
     if (item.quantity > 1) {
-      updateQuantity(item.product.id, item.quantity - 1);
+      updateQuantityByIndex(itemIndex, item.quantity - 1);
       onUpdate();
     }
   };
 
   const handleRemove = () => {
-    removeFromCart(item.product.id);
+    removeFromCartByIndex(itemIndex);
     onUpdate();
+  };
+
+  // Calculate item total including toppings
+  const calculateItemTotal = () => {
+    let total = item.product.price_inr * item.quantity;
+    
+    if (item.selectedToppings && item.selectedToppings.length > 0) {
+      const toppingsTotal = item.selectedToppings.reduce(
+        (sum, selectedTopping) => 
+          sum + (selectedTopping.topping.price_inr * selectedTopping.quantity * item.quantity),
+        0
+      );
+      total += toppingsTotal;
+    }
+    
+    return total;
   };
 
   return (
@@ -46,6 +63,26 @@ export default function CartItemCard({ item, onUpdate }: CartItemCardProps) {
           <p className="text-sm text-muted">
             {formatCurrency(item.product.price_inr)} each
           </p>
+          
+          {/* Show selected toppings */}
+          {item.selectedToppings && item.selectedToppings.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {item.selectedToppings.map((selectedTopping) => (
+                <div 
+                  key={selectedTopping.topping.id}
+                  className="text-xs text-muted flex items-center gap-2"
+                >
+                  <span>{selectedTopping.topping.icon_emoji}</span>
+                  <span>
+                    {selectedTopping.topping.name} × {selectedTopping.quantity}
+                  </span>
+                  <span className="text-rose">
+                    +{formatCurrency(selectedTopping.topping.price_inr * selectedTopping.quantity)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
@@ -67,7 +104,7 @@ export default function CartItemCard({ item, onUpdate }: CartItemCardProps) {
 
           <div className="flex items-center gap-4">
             <span className="font-bold text-lg">
-              {formatCurrency(item.product.price_inr * item.quantity)}
+              {formatCurrency(calculateItemTotal())}
             </span>
             <button
               onClick={handleRemove}

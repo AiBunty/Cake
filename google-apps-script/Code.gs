@@ -127,6 +127,7 @@ function handleGetProducts() {
       category: row[5] || 'Other',
       is_available: row[6] === true || row[6] === 'TRUE' || row[6] === true,
       sort_order: parseInt(row[7]) || 0,
+      allowed_toppings: row[8] ? row[8].toString() : '', // New column for linking toppings
     };
     products.push(product);
   }

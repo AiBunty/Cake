@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Product } from "@/types";
-import { getProducts } from "@/lib/api";
+import { Product, Topping } from "@/types";
+import { getProducts, getToppings } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -13,29 +13,39 @@ import Link from "next/link";
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [toppings, setToppings] = useState<Topping[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isSoundOn, setIsSoundOn] = useState(false);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getProducts();
-        if (response.ok && response.data) {
-          const productList = response.data as Product[];
+        const [productsResponse, toppingsResponse] = await Promise.all([
+          getProducts(),
+          getToppings()
+        ]);
+        
+        if (productsResponse.ok && productsResponse.data) {
+          const productList = productsResponse.data as Product[];
           setProducts(productList.sort((a, b) => a.sort_order - b.sort_order));
         } else {
-          setError(response.error || "Failed to load products");
+          setError(productsResponse.error || "Failed to load products");
+        }
+        
+        if (toppingsResponse.ok && toppingsResponse.data) {
+          const toppingList = toppingsResponse.data as Topping[];
+          setToppings(toppingList.sort((a, b) => a.sort_order - b.sort_order));
         }
       } catch (err) {
-        setError("Failed to load products");
+        setError("Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
   const categories = ["All", ...new Set(products.map((p) => p.category))];
@@ -189,7 +199,7 @@ export default function Home() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <ProductCard product={product} />
+                    <ProductCard product={product} allToppings={toppings} />
                   </motion.div>
                 ))}
               </motion.div>

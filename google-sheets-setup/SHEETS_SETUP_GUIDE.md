@@ -9,13 +9,14 @@
 
 ## Step 2: Create Required Tabs
 
-Your spreadsheet needs these 5 tabs (sheets):
+Your spreadsheet needs these 6 tabs (sheets):
 
 1. **Products** - Product catalog
-2. **TimeSlots** - Available pickup time slots
-3. **Orders** - Customer orders
-4. **CalendarBookings** - Calendar consultation bookings
-5. **Settings** - System configuration
+2. **Toppings** - Available toppings/add-ons
+3. **TimeSlots** - Available pickup time slots
+4. **Orders** - Customer orders
+5. **CalendarBookings** - Calendar consultation bookings
+6. **Settings** - System configuration
 
 ---
 
@@ -23,7 +24,7 @@ Your spreadsheet needs these 5 tabs (sheets):
 
 ### Column Headers (Row 1):
 ```
-id | name | description | price_inr | image_url | category | is_available | sort_order
+id | name | description | price_inr | image_url | category | is_available | sort_order | allowed_toppings
 ```
 
 ### Sample Data:
@@ -38,10 +39,58 @@ Copy the data from `sample-products.csv` into this sheet starting from row 2.
 - **category**: One of: Birthday, Wedding, Anniversary, Custom, Cupcakes, Pastries
 - **is_available**: TRUE or FALSE
 - **sort_order**: Number for sorting (lower appears first)
+- **allowed_toppings**: Space or comma-separated topping IDs (e.g., "top001 top005 top008") - Optional field to link toppings to specific products
+
+**Example with allowed_toppings:**
+```
+CAKE001 | Chocolate Delight | Rich chocolate cake | 1200 | https://... | Birthday | TRUE | 1 | top001 top005 top008
+CAKE002 | Vanilla Dream | Classic vanilla | 950 | https://... | Birthday | TRUE | 2 | top001 top002 top003
+CAKE003 | Red Velvet | Cream cheese frosting | 1350 | https://... | Wedding | TRUE | 3 | 
+```
+
+**Notes:**
+- Leave `allowed_toppings` empty to add product without topping selection
+- Use topping IDs from your Toppings tab (e.g., top001, top002)
+- Separate multiple IDs with spaces or commas: "top001 top005" or "top001,top005,top008"
 
 ---
 
-## Tab 2: TimeSlots
+## Tab 2: Toppings
+
+### Column Headers (Row 1):
+```
+id | name | description | price_inr | icon_emoji | is_available | sort_order
+```
+
+### Sample Data:
+```
+top001 | Extra Chocolate Chips | Premium dark chocolate chips | 80 | 🍫 | TRUE | 1
+top002 | Fresh Strawberries | Hand-picked strawberries | 120 | 🍓 | TRUE | 2
+top003 | Caramel Drizzle | Homemade caramel sauce | 60 | 🍯 | TRUE | 3
+top004 | Edible Gold Flakes | 24K edible gold | 250 | ✨ | TRUE | 4
+top005 | Whipped Cream | Fresh whipped cream | 50 | 🥛 | TRUE | 5
+top006 | Chocolate Ganache | Rich chocolate coating | 100 | 🍫 | TRUE | 6
+top007 | Crushed Nuts | Mixed nuts topping | 70 | 🥜 | TRUE | 7
+top008 | Fresh Berries Mix | Blueberries & raspberries | 150 | 🫐 | TRUE | 8
+```
+
+**Column Details:**
+- **id**: Unique identifier (e.g., top001, top002)
+- **name**: Topping name
+- **description**: Short description
+- **price_inr**: Additional price in Indian Rupees (numeric)
+- **icon_emoji**: Emoji to display with topping
+- **is_available**: TRUE or FALSE
+- **sort_order**: Number for sorting (lower appears first)
+
+**Notes:**
+- These topping IDs (top001, top002, etc.) are used in Products tab `allowed_toppings` column
+- When a product has allowed_toppings specified, customers will see a modal to select these toppings
+- Topping prices are per topping, multiplied by product quantity
+
+---4
+
+## Tab 3: TimeSlots
 
 ### Column Headers (Row 1):
 ```
@@ -50,7 +99,7 @@ date | slot_label | start_time | end_time | max_orders | is_open
 
 ### Sample Data:
 ```
-2026-03-06 | Morning Slot | 10:00 | 12:00 | 5 | TRUE
+2026-03506 | Morning Slot | 10:00 | 12:00 | 5 | TRUE
 2026-03-06 | Afternoon Slot | 14:00 | 16:00 | 5 | TRUE
 2026-03-06 | Evening Slot | 18:00 | 20:00 | 5 | TRUE
 2026-03-07 | Morning Slot | 10:00 | 12:00 | 5 | TRUE
@@ -96,7 +145,7 @@ booking_id | created_at | event_id | event_status | customer_name | phone | emai
 
 ---
 
-## Tab 5: Settings
+## Tab 6: Settings
 
 ### Column Headers (Row 1):
 ```

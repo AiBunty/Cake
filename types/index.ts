@@ -8,6 +8,7 @@ export interface Product {
   category: string;
   is_available: boolean;
   sort_order: number;
+  allowed_toppings?: string; // Space or comma-separated topping IDs (e.g., "top001 top005")
 }
 
 // Topping types
@@ -49,9 +50,15 @@ export interface TimeSlot {
 }
 
 // Cart types
+export interface SelectedTopping {
+  topping: Topping;
+  quantity: number;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedToppings?: SelectedTopping[];
 }
 
 export interface Cart {

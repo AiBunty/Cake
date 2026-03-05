@@ -2,9 +2,73 @@
 
 ## ✅ Quick Fix for Toppings Not Loading
 
-Your toppings aren't showing because the **Toppings sheet has the wrong structure** or missing data. Here's how to fix it:
+Your toppings aren't showing because:
+1. **Toppings sheet has wrong structure** or missing data
+2. **Products sheet is missing "Allowed Toppings" column** ⚠️ MOST COMMON
 
 ---
+
+## **🚀 FASTEST FIX (2 Minutes)**
+
+### **Step 1: Copy BOTH Helper Scripts**
+
+1. Go to https://script.google.com
+2. Open your Apps Script project
+3. Create 2 new files:
+
+**File 1: SetupToppingsTab**
+- Copy code from: `google-apps-script/SetupToppingsTab.gs`
+- Paste into Apps Script
+
+**File 2: SetupProductsToppings**
+- Copy code from: `google-apps-script/SetupProductsToppings.gs`
+- Paste into Apps Script
+
+### **Step 2: Run BOTH Functions**
+
+1. **First:** Run `setupToppingsTab()`
+   - Creates Toppings sheet with 10 sample toppings
+   - Check logs for ✅ success messages
+
+2. **Second:** Run `quickFixProductsToppings()`
+   - Adds "Allowed Toppings" column to Products sheet
+   - Sets all products to allow all toppings
+   - Check logs for ✅ success messages
+
+### **Step 3: Verify in Google Sheets**
+
+**Toppings Sheet:**
+- Should have 10 rows of toppings (T001-T010)
+- Columns: ID, Name, Description, Price, Icon, Available, Sort
+
+**Products Sheet:**
+- Column I (9th column) should be "Allowed Toppings"
+- Each product row should have: `T001,T002,T003,T004,T005,T006,T007,T008,T009,T010`
+
+### **Step 4: Redeploy**
+
+1. In Apps Script, click **Deploy** → **New deployment**
+2. Type: Web app
+3. Access: **Anyone** ⚠️
+4. Copy NEW URL
+5. Update `.env.local`:
+   ```
+   NEXT_PUBLIC_APPS_SCRIPT_BASE_URL=<NEW_URL>
+   ```
+6. Restart dev server
+
+### **Step 5: Test**
+
+Open browser console (F12) and look for this debug log:
+```
+🔍 Toppings Modal Debug:
+  allToppingsCount: 10
+  allowedToppingsCount: 10
+```
+
+---
+
+## **Old Step-by-Step Guide (If Quick Fix Doesn't Work)**
 
 ## **Step 1: Open the Helper Script**
 

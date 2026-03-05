@@ -137,6 +137,8 @@ function doPost(e) {
         return handleUpiPaymentSubmit(payload);
       case 'upi_mark_verified':
         return handleUpiMarkVerified(payload);
+      case 'admin_login':
+        return handleAdminLogin(payload);
       case 'admin_products_list':
         return handleAdminProductsList(payload);
       case 'admin_product_upsert':
@@ -223,10 +225,25 @@ function parseBoolean(value) {
 
 function validateAdminAccess(payload) {
   const settings = getSettings();
+  const configuredUsername = settings.admin_username ? settings.admin_username.toString().trim() : '';
+  const configuredPassword = settings.admin_password ? settings.admin_password.toString().trim() : '';
   const configuredAdminKey = settings.admin_panel_key ? settings.admin_panel_key.toString().trim() : '';
 
-  if (!configuredAdminKey) {
+  const hasUserPass = configuredUsername && configuredPassword;
+  const hasLegacyKey = !!configuredAdminKey;
+
+  if (!hasUserPass && !hasLegacyKey) {
     return { ok: true };
+  }
+
+  const providedUsername = payload && payload.admin_username ? payload.admin_username.toString().trim() : '';
+  const providedPassword = payload && payload.admin_password ? payload.admin_password.toString().trim() : '';
+
+  if (hasUserPass) {
+    if (providedUsername === configuredUsername && providedPassword === configuredPassword) {
+      return { ok: true };
+    }
+    return { ok: false, error: 'Invalid admin username or password' };
   }
 
   const providedKey = payload && payload.admin_key ? payload.admin_key.toString().trim() : '';
@@ -396,6 +413,15 @@ function handleGetOrdersByCustomer(email, phone) {
   });
   
   return jsonResponse(true, orders);
+}
+
+function handleAdminLogin(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  return jsonResponse(true, { authenticated: true });
 }
 
 function handleAdminProductsList(payload) {
@@ -725,6 +751,11 @@ function handleUpiPaymentSubmit(payload) {
 }
 
 function handleUpiMarkVerified(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
   if (!payload || !payload.order_id) {
     return jsonResponse(false, null, 'Invalid payload', 'order_id is required');
   }

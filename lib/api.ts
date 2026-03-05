@@ -17,6 +17,12 @@ const APPS_SCRIPT_API_KEY =
 const isServer = typeof window === "undefined";
 const API_BASE_URL = isServer ? APPS_SCRIPT_BASE_URL : "/api/apps-script";
 
+export interface AdminCredentials {
+  admin_username?: string;
+  admin_password?: string;
+  admin_key?: string;
+}
+
 export const appsScriptFetch = async <T>(
   route: string,
   options: RequestInit & { params?: Record<string, string> } = {}
@@ -177,10 +183,10 @@ export const submitUpiPayment = async (upiData: unknown) => {
   });
 };
 
-export const markUpiVerified = async (order_id: string) => {
+export const markUpiVerified = async (order_id: string, credentials?: AdminCredentials) => {
   return appsScriptFetch("upi_mark_verified", {
     method: "POST",
-    body: JSON.stringify({ order_id }),
+    body: JSON.stringify({ order_id, ...(credentials || {}) }),
   });
 };
 
@@ -202,44 +208,51 @@ export const getOrdersByCustomer = async (email?: string, phone?: string) => {
   });
 };
 
-export const adminListProducts = async (admin_key: string) => {
+export const adminLogin = async (credentials: AdminCredentials) => {
+  return appsScriptFetch("admin_login", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+};
+
+export const adminListProducts = async (credentials: AdminCredentials) => {
   return appsScriptFetch("admin_products_list", {
     method: "POST",
-    body: JSON.stringify({ admin_key }),
+    body: JSON.stringify(credentials),
   });
 };
 
-export const adminUpsertProduct = async (admin_key: string, product: unknown) => {
+export const adminUpsertProduct = async (credentials: AdminCredentials, product: unknown) => {
   return appsScriptFetch("admin_product_upsert", {
     method: "POST",
-    body: JSON.stringify({ admin_key, product }),
+    body: JSON.stringify({ ...credentials, product }),
   });
 };
 
-export const adminDeleteProduct = async (admin_key: string, id: string) => {
+export const adminDeleteProduct = async (credentials: AdminCredentials, id: string) => {
   return appsScriptFetch("admin_product_delete", {
     method: "POST",
-    body: JSON.stringify({ admin_key, id }),
+    body: JSON.stringify({ ...credentials, id }),
   });
 };
 
-export const adminListOrders = async (admin_key: string, limit = 200) => {
+export const adminListOrders = async (credentials: AdminCredentials, limit = 200) => {
   return appsScriptFetch("admin_orders_list", {
     method: "POST",
-    body: JSON.stringify({ admin_key, limit }),
+    body: JSON.stringify({ ...credentials, limit }),
   });
 };
 
-export const adminListSettings = async (admin_key: string) => {
+export const adminListSettings = async (credentials: AdminCredentials) => {
   return appsScriptFetch("admin_settings_list", {
     method: "POST",
-    body: JSON.stringify({ admin_key }),
+    body: JSON.stringify(credentials),
   });
 };
 
-export const adminUpsertSetting = async (admin_key: string, key: string, value: string) => {
+export const adminUpsertSetting = async (credentials: AdminCredentials, key: string, value: string) => {
   return appsScriptFetch("admin_settings_upsert", {
     method: "POST",
-    body: JSON.stringify({ admin_key, key, value }),
+    body: JSON.stringify({ ...credentials, key, value }),
   });
 };

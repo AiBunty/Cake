@@ -108,6 +108,8 @@ function ensureUpiSettings(sheet) {
     upi_vpa: 'your-upi-id@bank',
     upi_payee_name: 'Cake Studio',
     upi_screenshot_folder_id: '',
+    admin_username: 'admin',
+    admin_password: 'change-me',
     admin_panel_key: '',
   };
 

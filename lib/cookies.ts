@@ -54,6 +54,7 @@ export const setCookieConsent = (consent: Omit<CookieConsent, 'timestamp'>) => {
 
 export const acceptAllCookies = () => {
   setCookieConsent({
+    necessary: true,
     analytics: true,
     marketing: true,
     preferences: true,
@@ -62,6 +63,7 @@ export const acceptAllCookies = () => {
 
 export const rejectAllCookies = () => {
   setCookieConsent({
+    necessary: true,
     analytics: false,
     marketing: false,
     preferences: false,

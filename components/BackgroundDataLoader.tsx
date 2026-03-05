@@ -26,8 +26,8 @@ export default function BackgroundDataLoader() {
         console.log('✅ Background data cache complete');
 
         // Log cache status
-        if (products.ok) console.log(`✓ Cached ${products.data?.length} products`);
-        if (toppings.ok) console.log(`✓ Cached ${toppings.data?.length} toppings`);
+        if (products.ok && Array.isArray(products.data)) console.log(`✓ Cached ${products.data.length} products`);
+        if (toppings.ok && Array.isArray(toppings.data)) console.log(`✓ Cached ${toppings.data.length} toppings`);
         if (settings.ok) console.log('✓ Cached company settings');
 
         // Optional: Pre-load today's time slots

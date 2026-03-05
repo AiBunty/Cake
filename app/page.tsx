@@ -66,9 +66,9 @@ export default function Home() {
             <iframe
               width="100%"
               height="100%"
-              src={`https://www.youtube.com/embed/uMAbWsMnKYk?start=20&autoplay=1&mute=${
+              src={`https://www.youtube-nocookie.com/embed/uMAbWsMnKYk?start=20&autoplay=1&mute=${
                 isSoundOn ? 0 : 1
-              }&controls=0&rel=0&modestbranding=1&loop=1&playlist=uMAbWsMnKYk&playsinline=1`}
+              }&controls=0&rel=0&modestbranding=1&loop=1&playlist=uMAbWsMnKYk&playsinline=1&enablejsapi=0`}
               title="Cake Studio - Premium Artisan Cakes"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

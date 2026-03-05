@@ -1,0 +1,21 @@
+id,name,description,price_inr,image_url,category,is_available,sort_order
+CAKE001,Chocolate Fudge Delight,Rich dark chocolate cake with smooth fudge frosting and chocolate shavings,1200,https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800,Birthday,TRUE,1
+CAKE002,Red Velvet Classic,Smooth red velvet cake with cream cheese frosting and elegant finish,1400,https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=800,Birthday,TRUE,2
+CAKE003,Strawberry Dream,Fresh strawberry cake with whipped cream and seasonal berries,1600,https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800,Birthday,TRUE,3
+CAKE004,Black Forest Heaven,Classic black forest with cherries and dark chocolate layers,1500,https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800,Birthday,TRUE,4
+CAKE005,Vanilla Bean Elegance,Premium vanilla bean cake with Swiss meringue buttercream,1300,https://images.unsplash.com/photo-1588195538326-c5b1e5b80634?w=800,Birthday,TRUE,5
+CAKE006,Triple Tier Wedding Bliss,Elegant three-tier wedding cake with royal icing and floral decor,12000,https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800,Wedding,TRUE,6
+CAKE007,Rose Garden Wedding,Romantic rose-themed wedding cake with buttercream flowers,15000,https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=800,Wedding,TRUE,7
+CAKE008,Naked Cake Rustic Charm,Minimalist naked cake with fresh flowers and berries,8000,https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=800,Wedding,TRUE,8
+CAKE009,Golden Anniversary Special,Luxurious gold-themed cake perfect for milestone celebrations,2500,https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=800,Anniversary,TRUE,9
+CAKE010,Heart Shape Romance,Beautiful heart-shaped cake with red roses and romantic design,1800,https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=800,Anniversary,TRUE,10
+CAKE011,Tiramisu Temptation,Italian classic with espresso-soaked layers and mascarpone cream,1700,https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=800,Custom,TRUE,11
+CAKE012,Mango Madness,Tropical mango mousse cake with fresh mango pieces,1600,https://images.unsplash.com/photo-1550617931-e17a7b70dce2?w=800,Custom,TRUE,12
+CAKE013,Matcha Green Tea,Premium matcha green tea cake with white chocolate ganache,1900,https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=800,Custom,TRUE,13
+CAKE014,Unicorn Rainbow Delight,Colorful rainbow layers with unicorn-themed decoration,2200,https://images.unsplash.com/photo-1603532648955-039310d9ed75?w=800,Birthday,TRUE,14
+CAKE015,Chocolate Cupcake Box,Set of 12 gourmet chocolate cupcakes with assorted toppings,800,https://images.unsplash.com/photo-1587241321921-91a834d82f76?w=800,Cupcakes,TRUE,15
+CAKE016,Vanilla Cupcake Assortment,Set of 12 vanilla cupcakes with buttercream frosting,750,https://images.unsplash.com/photo-1614707267537-b85aaf00c4b7?w=800,Cupcakes,TRUE,16
+CAKE017,Red Velvet Cupcakes,Set of 6 red velvet cupcakes with cream cheese frosting,450,https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=800,Cupcakes,TRUE,17
+CAKE018,Blueberry Cheesecake Pastry,Individual blueberry cheesecake with graham cracker crust,300,https://images.unsplash.com/photo-1533134486753-c833f0ed4866?w=800,Pastries,TRUE,18
+CAKE019,Chocolate Eclairs,Classic French eclairs with rich chocolate ganache,250,https://images.unsplash.com/photo-1612786410972-cc346289c2eb?w=800,Pastries,TRUE,19
+CAKE020,Fruit Tart Collection,Assorted mini fruit tarts with custard and fresh seasonal fruits,600,https://images.unsplash.com/photo-1488477181946-6428a0291777?w=800,Pastries,TRUE,20

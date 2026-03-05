@@ -1,0 +1,274 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================
+   LUXURY BAKERY THEME TOKENS
+   =========================== */
+:root {
+  --bg: #F8E9F2;
+  --panel: rgba(255, 255, 255, 0.5);
+  --stroke: rgba(255, 79, 183, 0.2);
+  --text: #4A2C3E;
+  --muted: rgba(74, 44, 62, 0.7);
+  
+  --rose: #FF4FB7;
+  --pink: #FF86D6;
+  --violet: #A855F7;
+  --lav: #C7A2FF;
+  --glowSoft: rgba(255, 79, 183, 0.15);
+}
+
+/* ===========================
+   BASE STYLES
+   =========================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Soft ambient gradient mesh background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(900px circle at 20% 10%, rgba(255, 79, 183, 0.18), transparent 55%),
+    radial-gradient(800px circle at 80% 30%, rgba(168, 85, 247, 0.16), transparent 55%),
+    radial-gradient(700px circle at 50% 90%, rgba(199, 162, 255, 0.10), transparent 55%);
+  animation: float 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Light noise texture for premium feel */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulance type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Subtle spotlight effect */
+.spotlight-container {
+  position: relative;
+  z-index: 2;
+}
+
+@media (min-width: 768px) {
+  .spotlight-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      700px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 79, 183, 0.06),
+      transparent 50%
+    );
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .spotlight-container:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Floating ambient blobs */
+.floating-blobs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floating-blobs::before,
+.floating-blobs::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  animation: float 25s ease-in-out infinite;
+}
+
+.floating-blobs::before {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--pink) 0%, transparent 70%);
+  top: 20%;
+  left: 10%;
+  animation-delay: -5s;
+}
+
+.floating-blobs::after {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--purple) 0%, transparent 70%);
+  bottom: 10%;
+  right: 15%;
+  animation-delay: -10s;
+}
+
+/* ===========================
+   UTILITY CLASSES
+   =========================== */
+
+/* Glass panel - elegant and soft */
+.glass-panel {
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--stroke);
+  border-radius: 24px;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Soft glow border - elegant gradient */
+.glow-border {
+  position: relative;
+  border: 1px solid transparent;
+  background-image: linear-gradient(var(--bg), var(--bg)), 
+                    linear-gradient(135deg, rgba(255, 79, 183, 0.9), rgba(168, 85, 247, 0.8));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, var(--rose), var(--violet));
+  border-radius: inherit;
+  opacity: 0;
+  filter: blur(12px);
+  z-index: -1;
+  transition: opacity 0.35s ease;
+}
+
+.glow-border:hover::before {
+  opacity: 0.4;
+}
+
+/* Gradient text - rose to lavender */
+.gradient-text {
+  background: linear-gradient(135deg, var(--rose) 0%, var(--violet) 55%, var(--lav) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Soft focus rings */
+.focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 79, 183, 0.25), 0 0 12px rgba(168, 85, 247, 0.15);
+}
+
+/* Card hover lift - subtle and elegant */
+.card-lift {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 79, 183, 0.15), 0 4px 16px rgba(168, 85, 247, 0.1);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background: var(--rose);
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--rose), var(--violet));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rose);
+}
+
+/* ===========================
+   ANIMATIONS
+   =========================== */
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -30px) rotate(120deg);
+  }
+  66% {
+    transform: translate(-20px, 20px) rotate(240deg);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Page transition fade */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeIn 0.5s ease-out;
+}

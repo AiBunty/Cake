@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { getCart, clearCart } from "@/lib/cart";
-import { Cart, TimeSlot, OrderData } from "@/types";
+import { Cart, TimeSlot, OrderData, Settings } from "@/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { formatCurrency, getCurrentTimezone, getMinPickupDate, getMaxPickupDate, formatTime12h } from "@/lib/utils";
-import { getTimeSlots, createOrder } from "@/lib/api";
-import { Calendar, Clock, CreditCard } from "lucide-react";
+import { getTimeSlots, createOrder, getSettings, submitUpiPayment } from "@/lib/api";
+import { Calendar, Clock, CreditCard, QrCode, Smartphone } from "lucide-react";
 
 declare global {
   interface Window {
@@ -26,6 +26,15 @@ export default function CheckoutPage() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"RAZORPAY" | "UPI">("RAZORPAY");
+  const [settings, setSettings] = useState<Settings>({});
+  const [upiOrderId, setUpiOrderId] = useState("");
+  const [upiLink, setUpiLink] = useState("");
+  const [upiQrUrl, setUpiQrUrl] = useState("");
+  const [upiUtr, setUpiUtr] = useState("");
+  const [upiScreenshotFile, setUpiScreenshotFile] = useState<File | null>(null);
+  const [upiUtrError, setUpiUtrError] = useState("");
+  const [submittingUpi, setSubmittingUpi] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_name: "",
@@ -62,6 +71,17 @@ export default function CheckoutPage() {
     return () => {
       document.body.removeChild(script);
     };
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const response = await getSettings();
+      if (response.ok && response.data) {
+        setSettings(response.data as Settings);
+      }
+    };
+
+    fetchSettings();
   }, []);
 
   const fetchTimeSlots = async (date: string) => {
@@ -106,6 +126,15 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const toDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || "");
+      reader.onerror = () => reject(new Error("Failed to read screenshot file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -135,6 +164,7 @@ export default function CheckoutPage() {
         pickup_timezone: getCurrentTimezone(),
         cart_json: JSON.stringify(cart.items),
         subtotal_inr: cart.total,
+        payment_method: paymentMethod,
         notes: formData.notes || "",
       };
 
@@ -145,6 +175,33 @@ export default function CheckoutPage() {
       }
 
       const order = orderResponse.data as any;
+
+      if (paymentMethod === "UPI") {
+        const upiVpa = (settings.upi_vpa || "").toString().trim();
+        const upiPayeeName = (settings.upi_payee_name || "").toString().trim();
+
+        if (!upiVpa || !upiPayeeName) {
+          throw new Error("UPI settings are missing (upi_vpa / upi_payee_name)");
+        }
+
+        const note = `Cake Order ${order.order_id}`;
+        const query = new URLSearchParams({
+          pa: upiVpa,
+          pn: upiPayeeName,
+          am: cart.total.toFixed(2),
+          cu: "INR",
+          tn: note,
+        });
+        const generatedUpiLink = `upi://pay?${query.toString()}`;
+
+        setUpiOrderId(order.order_id);
+        setUpiLink(generatedUpiLink);
+        setUpiQrUrl(
+          `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(generatedUpiLink)}`
+        );
+        setProcessing(false);
+        return;
+      }
 
       // Create Razorpay order
       const razorpayResponse = await fetch("/api/create-razorpay-order", {
@@ -216,6 +273,44 @@ export default function CheckoutPage() {
       console.error("Checkout error:", error);
       alert("Failed to process checkout. Please try again.");
       setProcessing(false);
+    }
+  };
+
+  const handleUpiSubmit = async () => {
+    if (!upiOrderId) {
+      return;
+    }
+
+    if (!upiUtr.trim()) {
+      setUpiUtrError("UTR / Transaction ID is required");
+      return;
+    }
+
+    setUpiUtrError("");
+    setSubmittingUpi(true);
+
+    try {
+      const screenshotDataUrl = upiScreenshotFile ? await toDataUrl(upiScreenshotFile) : "";
+
+      const response = await submitUpiPayment({
+        order_id: upiOrderId,
+        upi_utr: upiUtr.trim(),
+        screenshot_data_url: screenshotDataUrl,
+        screenshot_file_name: upiScreenshotFile?.name || "",
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || "Failed to submit UPI details");
+      }
+
+      clearCart();
+      window.dispatchEvent(new Event("cartUpdated"));
+      router.push(`/success?order_id=${upiOrderId}&payment_method=UPI&payment_status=PENDING_VERIFICATION`);
+    } catch (error) {
+      console.error("UPI submit error:", error);
+      alert("Failed to submit UPI payment details. Please try again.");
+    } finally {
+      setSubmittingUpi(false);
     }
   };
 
@@ -357,15 +452,121 @@ export default function CheckoutPage() {
                 />
               </div>
 
+              <div className="glass-panel p-6 space-y-4 shadow-lg">
+                <h2 className="text-xl font-display font-semibold flex items-center gap-2">
+                  <span className="text-rose">03</span> Payment Method
+                </h2>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("RAZORPAY")}
+                    className={`text-left rounded-2xl border px-4 py-3 transition-all ${
+                      paymentMethod === "RAZORPAY"
+                        ? "border-rose/60 bg-rose/10"
+                        : "border-stroke bg-panel/40 hover:border-rose/30"
+                    }`}
+                  >
+                    <p className="font-semibold text-text">Razorpay</p>
+                    <p className="text-xs text-muted">Auto-confirm after payment</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("UPI")}
+                    className={`text-left rounded-2xl border px-4 py-3 transition-all ${
+                      paymentMethod === "UPI"
+                        ? "border-rose/60 bg-rose/10"
+                        : "border-stroke bg-panel/40 hover:border-rose/30"
+                    }`}
+                  >
+                    <p className="font-semibold text-text">UPI (Free)</p>
+                    <p className="text-xs text-muted">Manual verification with UTR</p>
+                  </button>
+                </div>
+              </div>
+
+              {paymentMethod === "UPI" && upiOrderId && (
+                <div className="glass-panel p-6 space-y-5 shadow-lg">
+                  <h2 className="text-xl font-display font-semibold flex items-center gap-2">
+                    <QrCode className="text-rose" size={20} /> Complete UPI Payment
+                  </h2>
+
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted">Order ID: <span className="font-mono text-text">{upiOrderId}</span></p>
+                    <p className="text-sm text-muted">Amount: <span className="text-text font-semibold">{formatCurrency(cart.total)}</span></p>
+                    <p className="text-sm text-muted">UPI ID: <span className="font-mono text-text">{settings.upi_vpa || "Not configured"}</span></p>
+                  </div>
+
+                  {upiQrUrl && (
+                    <div className="rounded-2xl border border-stroke p-4 w-fit bg-white">
+                      <img src={upiQrUrl} alt="UPI QR Code" className="w-52 h-52 sm:w-64 sm:h-64" />
+                    </div>
+                  )}
+
+                  {upiLink && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="gap-2"
+                      onClick={() => {
+                        window.location.href = upiLink;
+                      }}
+                    >
+                      <Smartphone size={18} />
+                      <span>Pay via UPI App</span>
+                    </Button>
+                  )}
+
+                  <div className="space-y-4 pt-2 border-t border-stroke">
+                    <Input
+                      label="UTR / Transaction ID"
+                      placeholder="Enter UTR number"
+                      value={upiUtr}
+                      onChange={(e) => setUpiUtr(e.target.value)}
+                      error={upiUtrError}
+                      required
+                    />
+
+                    <div className="flex flex-col gap-2 w-full">
+                      <label className="text-sm font-medium text-muted">Payment Screenshot (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setUpiScreenshotFile(e.target.files?.[0] || null)}
+                        className="glass-panel px-4 py-3 rounded-2xl bg-panel/50 border border-stroke text-text"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="primary"
+                      isLoading={submittingUpi}
+                      disabled={submittingUpi}
+                      onClick={handleUpiSubmit}
+                      className="w-full"
+                    >
+                      Submit UPI Payment Details
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 variant="primary"
                 isLoading={processing}
-                disabled={processing}
+                disabled={processing || (paymentMethod === "UPI" && !!upiOrderId)}
                 className="w-full text-lg py-4 group"
               >
                 <CreditCard size={20} />
-                <span>Pay {formatCurrency(cart.total)}</span>
+                <span>
+                  {paymentMethod === "UPI"
+                    ? upiOrderId
+                      ? "Order Created for UPI Payment"
+                      : `Proceed with UPI ${formatCurrency(cart.total)}`
+                    : `Pay ${formatCurrency(cart.total)}`}
+                </span>
               </Button>
             </form>
 

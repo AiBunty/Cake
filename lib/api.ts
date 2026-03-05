@@ -170,6 +170,20 @@ export const markOrderPaid = async (paymentData: unknown) => {
   });
 };
 
+export const submitUpiPayment = async (upiData: unknown) => {
+  return appsScriptFetch("upi_payment_submit", {
+    method: "POST",
+    body: JSON.stringify(upiData),
+  });
+};
+
+export const markUpiVerified = async (order_id: string) => {
+  return appsScriptFetch("upi_mark_verified", {
+    method: "POST",
+    body: JSON.stringify({ order_id }),
+  });
+};
+
 export const getOrdersByCustomer = async (email?: string, phone?: string) => {
   if (!email && !phone) {
     return {

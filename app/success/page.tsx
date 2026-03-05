@@ -12,6 +12,9 @@ import { CheckCircle, Calendar, Clock, Package } from "lucide-react";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
+  const paymentMethod = searchParams.get("payment_method");
+  const paymentStatus = searchParams.get("payment_status");
+  const isUpiPending = paymentMethod === "UPI" && paymentStatus === "PENDING_VERIFICATION";
 
   if (!orderId) {
     return (
@@ -52,10 +55,12 @@ function SuccessContent() {
         {/* Success Message */}
         <div className="space-y-2">
           <h1 className="text-4xl sm:text-5xl font-display font-semibold">
-            <span className="gradient-text">Order Confirmed!</span>
+            <span className="gradient-text">{isUpiPending ? "Order Received!" : "Order Confirmed!"}</span>
           </h1>
           <p className="text-xl text-muted">
-            Your payment was successful
+            {isUpiPending
+              ? "Your UPI payment is pending manual verification"
+              : "Your payment was successful"}
           </p>
         </div>
 
@@ -92,7 +97,11 @@ function SuccessContent() {
           <ul className="space-y-2 text-muted leading-relaxed">
             <li className="flex items-start gap-2">
               <span className="text-rose mt-1">•</span>
-              <span>You'll receive a confirmation email shortly with your order details.</span>
+              <span>
+                {isUpiPending
+                  ? "We are verifying your UPI transaction details and will confirm shortly."
+                  : "You'll receive a confirmation email shortly with your order details."}
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-rose mt-1">•</span>

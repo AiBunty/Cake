@@ -78,13 +78,17 @@ export interface OrderData {
   pickup_timezone: string;
   cart_json: string;
   subtotal_inr: number;
+  payment_method?: "RAZORPAY" | "UPI";
   notes?: string;
 }
 
 export interface Order extends OrderData {
   order_id: string;
   created_at: string;
-  payment_status: "CREATED" | "PAID" | "FAILED";
+  payment_status: "CREATED" | "PENDING_VERIFICATION" | "PAID" | "FAILED";
+  upi_utr?: string;
+  upi_status?: "RECEIVED" | "VERIFIED";
+  upi_screenshot_url?: string;
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   razorpay_signature?: string;

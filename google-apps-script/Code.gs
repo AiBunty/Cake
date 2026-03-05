@@ -85,6 +85,8 @@ function doGet(e) {
         return handleGetSettings();
       case 'orders_by_customer':
         return handleGetOrdersByCustomer(e.parameter.email, e.parameter.phone);
+      case 'upi_mark_verified':
+        return handleUpiMarkVerified({ order_id: e.parameter.order_id });
       default:
         return jsonResponse(false, null, 'Unknown route', route);
     }
@@ -131,6 +133,10 @@ function doPost(e) {
         return handleCreateOrder(payload);
       case 'payments_mark_paid':
         return handleMarkOrderPaid(payload);
+      case 'upi_payment_submit':
+        return handleUpiPaymentSubmit(payload);
+      case 'upi_mark_verified':
+        return handleUpiMarkVerified(payload);
       case 'crm_push_order':
         return handleCrmPushOrder(e.parameter.order_id);
       case 'crm_push_booking':
@@ -346,6 +352,11 @@ function handleGetOrdersByCustomer(email, phone) {
         razorpay_order_id: row[13] || '',
         razorpay_payment_id: row[14] || '',
         notes: row[21] || '',
+        payment_method: row[22] || 'RAZORPAY',
+        upi_utr: row[23] || '',
+        upi_status: row[24] || '',
+        upi_screenshot_url: row[25] || '',
+        upi_submitted_at: row[26] || '',
       };
       orders.push(order);
     }
@@ -393,6 +404,8 @@ function handleCreateOrder(payload) {
     const timestamp = new Date().toISOString();
     
     const sheet = getSheet('Orders');
+    const paymentMethod = payload.payment_method === 'UPI' ? 'UPI' : 'RAZORPAY';
+
     sheet.appendRow([
       orderId,
       timestamp,
@@ -416,6 +429,11 @@ function handleCreateOrder(payload) {
       '', // crm_opportunity_id
       '', // invoice_receipt_url
       payload.notes || '',
+      paymentMethod, // payment_method
+      '', // upi_utr
+      '', // upi_status
+      '', // upi_screenshot_url
+      '', // upi_submitted_at
     ]);
     
     return jsonResponse(true, { order_id: orderId, created_at: timestamp });
@@ -436,6 +454,7 @@ function handleMarkOrderPaid(payload) {
     if (data[i][0] === payload.order_id) {
       // Update payment status
       sheet.getRange(i + 1, 13).setValue('PAID');
+      sheet.getRange(i + 1, 23).setValue('RAZORPAY');
       sheet.getRange(i + 1, 14).setValue(payload.razorpay_order_id);
       sheet.getRange(i + 1, 15).setValue(payload.razorpay_payment_id);
       sheet.getRange(i + 1, 16).setValue(payload.razorpay_signature);
@@ -452,6 +471,156 @@ function handleMarkOrderPaid(payload) {
   }
   
   return jsonResponse(false, null, 'Order not found');
+}
+
+function handleUpiPaymentSubmit(payload) {
+  if (!payload || !payload.order_id || !payload.upi_utr) {
+    return jsonResponse(false, null, 'Invalid payload', 'order_id and upi_utr are required');
+  }
+
+  const sheet = getSheet('Orders');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Orders sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === payload.order_id) {
+      let screenshotUrl = '';
+
+      if (payload.screenshot_data_url) {
+        const screenshotResult = saveUpiScreenshot(
+          payload.order_id,
+          payload.screenshot_data_url,
+          payload.screenshot_file_name
+        );
+        if (screenshotResult.ok) {
+          screenshotUrl = screenshotResult.url || '';
+        }
+      }
+
+      sheet.getRange(i + 1, 13).setValue('PENDING_VERIFICATION'); // payment_status
+      sheet.getRange(i + 1, 23).setValue('UPI'); // payment_method
+      sheet.getRange(i + 1, 24).setValue(payload.upi_utr.toString().trim()); // upi_utr
+      sheet.getRange(i + 1, 25).setValue('RECEIVED'); // upi_status
+      sheet.getRange(i + 1, 26).setValue(screenshotUrl); // upi_screenshot_url
+      sheet.getRange(i + 1, 27).setValue(new Date().toISOString()); // upi_submitted_at
+
+      appendUpiPaymentLog({
+        order_id: payload.order_id,
+        amount: parseFloat(data[i][11]) || 0,
+        upi_utr: payload.upi_utr.toString().trim(),
+        screenshot_url: screenshotUrl,
+        status: 'RECEIVED',
+      });
+
+      const pushResult = pushOrderToCRM(payload.order_id, { allowUnpaid: true });
+
+      return jsonResponse(true, {
+        order_id: payload.order_id,
+        payment_method: 'UPI',
+        upi_status: 'RECEIVED',
+        payment_status: 'PENDING_VERIFICATION',
+        upi_screenshot_url: screenshotUrl,
+        crm_push_status: pushResult.ok ? 'SUCCESS' : 'FAILED',
+      });
+    }
+  }
+
+  return jsonResponse(false, null, 'Order not found');
+}
+
+function handleUpiMarkVerified(payload) {
+  if (!payload || !payload.order_id) {
+    return jsonResponse(false, null, 'Invalid payload', 'order_id is required');
+  }
+
+  const sheet = getSheet('Orders');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Orders sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === payload.order_id) {
+      sheet.getRange(i + 1, 13).setValue('PAID'); // payment_status
+      sheet.getRange(i + 1, 23).setValue('UPI'); // payment_method
+      sheet.getRange(i + 1, 25).setValue('VERIFIED'); // upi_status
+
+      appendUpiPaymentLog({
+        order_id: payload.order_id,
+        amount: parseFloat(data[i][11]) || 0,
+        upi_utr: data[i][23] || '',
+        screenshot_url: data[i][25] || '',
+        status: 'VERIFIED',
+      });
+
+      const pushResult = pushOrderToCRM(payload.order_id);
+
+      return jsonResponse(true, {
+        order_id: payload.order_id,
+        payment_status: 'PAID',
+        upi_status: 'VERIFIED',
+        crm_push_status: pushResult.ok ? 'SUCCESS' : 'FAILED',
+      });
+    }
+  }
+
+  return jsonResponse(false, null, 'Order not found');
+}
+
+function saveUpiScreenshot(orderId, screenshotDataUrl, screenshotFileName) {
+  try {
+    if (!screenshotDataUrl || typeof screenshotDataUrl !== 'string') {
+      return { ok: false, error: 'Screenshot data missing' };
+    }
+
+    const settings = getSettings();
+    const folderId = settings.upi_screenshot_folder_id ? settings.upi_screenshot_folder_id.toString().trim() : '';
+    const folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
+
+    let mimeType = 'image/png';
+    let base64Part = screenshotDataUrl;
+
+    const dataUrlMatch = screenshotDataUrl.match(/^data:(.*?);base64,(.*)$/);
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1] || mimeType;
+      base64Part = dataUrlMatch[2] || '';
+    }
+
+    if (!base64Part) {
+      return { ok: false, error: 'Invalid screenshot payload' };
+    }
+
+    const extension = mimeType.indexOf('jpeg') >= 0 ? 'jpg' : 'png';
+    const filename = screenshotFileName || ('upi_' + orderId + '_' + Date.now() + '.' + extension);
+    const bytes = Utilities.base64Decode(base64Part);
+    const blob = Utilities.newBlob(bytes, mimeType, filename);
+    const file = folder.createFile(blob);
+
+    return { ok: true, url: file.getUrl(), file_id: file.getId() };
+  } catch (error) {
+    Logger.log('saveUpiScreenshot error: ' + error);
+    return { ok: false, error: error.toString() };
+  }
+}
+
+function appendUpiPaymentLog(entry) {
+  const sheet = getSheet('UPIPayments');
+  if (!sheet) {
+    return;
+  }
+
+  sheet.appendRow([
+    entry.order_id || '',
+    new Date().toISOString(),
+    entry.amount || 0,
+    entry.upi_utr || '',
+    entry.screenshot_url || '',
+    entry.status || '',
+  ]);
 }
 
 function handleCrmPushOrder(orderId) {
@@ -476,14 +645,15 @@ function handleCrmPushBooking(bookingId) {
 // CRM INTEGRATION
 // ============================================================================
 
-function pushOrderToCRM(orderId) {
+function pushOrderToCRM(orderId, options) {
   try {
+    const opts = options || {};
     const order = getOrderById(orderId);
     if (!order) {
       return { ok: false, error: 'Order not found' };
     }
     
-    if (order.payment_status !== 'PAID') {
+    if (order.payment_status !== 'PAID' && !opts.allowUnpaid) {
       return { ok: false, error: 'Order not paid yet' };
     }
     
@@ -574,6 +744,21 @@ function buildOrderCrmPayload(order) {
   const pickupDateTime = new Date(order.pickup_date + 'T' + order.pickup_start_time);
   const timeFields = buildTimeFields(pickupDateTime);
   const settings = getSettings();
+  const orderNotes = [order.notes || ''];
+
+  if (order.payment_method) {
+    orderNotes.push('Payment Method: ' + order.payment_method);
+  }
+
+  if (order.upi_utr) {
+    orderNotes.push('UPI UTR: ' + order.upi_utr);
+  }
+
+  if (order.upi_status) {
+    orderNotes.push('UPI Status: ' + order.upi_status);
+  }
+
+  const mergedNotes = orderNotes.filter(Boolean).join(' | ');
   
   return {
     contact: {
@@ -596,6 +781,7 @@ function buildOrderCrmPayload(order) {
       lead_value: order.subtotal_inr,
       assigned_to_staff: settings.assigned_to_staff || '',
       opportunity_source: 'Website',
+      notes: mergedNotes,
     },
     calendar: {
       appointment_date: order.pickup_date,
@@ -612,9 +798,10 @@ function buildOrderCrmPayload(order) {
       inv_value: order.subtotal_inr,
       inv_receipt: order.invoice_receipt_url || '',
       inv_date: order.created_at.split('T')[0],
-      pay: '',
+      pay: order.payment_method || '',
       failed: '',
     },
+    notes: mergedNotes,
     meta: {
       type: 'order',
       source: 'Cake Website',
@@ -1053,6 +1240,11 @@ function getOrderById(orderId) {
         crm_opportunity_id: data[i][19],
         invoice_receipt_url: data[i][20],
         notes: data[i][21],
+        payment_method: data[i][22] || 'RAZORPAY',
+        upi_utr: data[i][23] || '',
+        upi_status: data[i][24] || '',
+        upi_screenshot_url: data[i][25] || '',
+        upi_submitted_at: data[i][26] || '',
       };
     }
   }

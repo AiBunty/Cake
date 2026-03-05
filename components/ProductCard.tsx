@@ -50,7 +50,7 @@ export default function ProductCard({ product, allToppings }: ProductCardProps) 
   return (
     <>
       <Card hover glow className="overflow-hidden group">
-        <div className="relative h-52 mb-4 rounded-2xl overflow-hidden bg-gradient-to-br from-rose/5 to-violet/5">
+        <div className="relative h-40 sm:h-52 mb-3 sm:mb-4 rounded-2xl overflow-hidden bg-gradient-to-br from-rose/5 to-violet/5">
           <Image
             src={product.image_url}
             alt={product.name}
@@ -59,30 +59,30 @@ export default function ProductCard({ product, allToppings }: ProductCardProps) 
           />
           {!product.is_available && (
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-              <span className="text-red-400 font-semibold text-lg">Out of Stock</span>
+              <span className="text-red-400 font-semibold text-sm sm:text-lg">Out of Stock</span>
             </div>
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           <div>
-            <h3 className="text-xl font-display font-semibold text-text mb-1">
+            <h3 className="text-base sm:text-xl font-display font-semibold text-text mb-1">
               {product.name}
             </h3>
-            <p className="text-sm text-muted line-clamp-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted line-clamp-2 leading-relaxed">
               {product.description}
             </p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold gradient-text">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-lg sm:text-2xl font-bold gradient-text whitespace-nowrap">
               {formatCurrency(product.price_inr)}
             </span>
             <Button
               variant="primary"
               onClick={handleButtonClick}
               disabled={!product.is_available || isAdding}
-              className="text-sm"
+              className="text-xs sm:text-sm px-3 sm:px-6 py-2 sm:py-3"
             >
               {isAdding ? "Added!" : "Add to Cart"}
             </Button>

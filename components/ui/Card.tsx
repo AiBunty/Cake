@@ -10,7 +10,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ hover = false, glow = false, className = "", children, ...props }, ref) => {
-    const baseStyles = "glass-panel p-6";
+    const baseStyles = "glass-panel p-3 sm:p-6";
     const hoverStyles = hover ? "card-lift cursor-pointer" : "";
     const glowStyles = glow ? "glow-border" : "";
 

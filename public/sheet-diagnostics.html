@@ -38,6 +38,16 @@
   </div>
 
   <div class="card">
+    <h3 style="margin-top:0">Admin Panel Testing</h3>
+    <div class="row">
+      <input id="adminUsername" type="text" placeholder="Admin username" value="admin" />
+      <input id="adminPassword" type="password" placeholder="Admin password" value="change-me" />
+      <button id="testAdminBtn">Test Admin Routes</button>
+    </div>
+    <div class="muted" style="margin-top:10px;">Test admin authentication and protected routes (login, products list, orders list, settings list)</div>
+  </div>
+
+  <div class="card">
     <table>
       <thead>
         <tr>
@@ -139,6 +149,56 @@
       }
     }
 
+    async function testAdminRoute(name, route, credentials, extraBody = {}) {
+      const url = `/api/apps-script?route=${route}`;
+      log(`Testing ${name}: ${url}`);
+
+      try {
+        const body = JSON.stringify({ ...credentials, ...extraBody });
+        const res = await fetch(url, { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        });
+        const text = await res.text();
+        let json;
+
+        try {
+          json = JSON.parse(text);
+        } catch {
+          json = null;
+        }
+
+        if (!res.ok) {
+          addRow(name, 'FAIL', res.status, '-', `HTTP error ${res.status}`);
+          log(`${name} failed with HTTP ${res.status}`, { bodyPreview: text.slice(0, 300) });
+          return false;
+        }
+
+        if (!json || typeof json !== 'object') {
+          addRow(name, 'FAIL', res.status, '-', 'Non-JSON response');
+          log(`${name} returned non-JSON`, { bodyPreview: text.slice(0, 300) });
+          return false;
+        }
+
+        if (!json.ok) {
+          addRow(name, 'FAIL', res.status, '-', json.error || 'API returned ok=false');
+          log(`${name} API error`, json);
+          return false;
+        }
+
+        const data = json.data;
+        const rows = Array.isArray(data) ? data.length : (data && typeof data === 'object' ? Object.keys(data).length : 1);
+        addRow(name, 'PASS', res.status, rows, 'Data fetched');
+        log(`${name} success`, { rows, sample: Array.isArray(data) ? data.slice(0, 1) : data });
+        return true;
+      } catch (error) {
+        addRow(name, 'FAIL', '-', '-', error.message || 'Request failed');
+        log(`${name} exception`, { message: error.message, stack: error.stack });
+        return false;
+      }
+    }
+
     async function runDiagnostics() {
       resultsBody.innerHTML = '';
       logBox.textContent = 'Starting diagnostics...';
@@ -167,7 +227,44 @@
       log('Diagnostics complete.');
     }
 
+    async function testAdminRoutes() {
+      resultsBody.innerHTML = '';
+      logBox.textContent = 'Starting admin route tests...';
+
+      const username = document.getElementById('adminUsername').value.trim();
+      const password = document.getElementById('adminPassword').value.trim();
+
+      if (!username || !password) {
+        log('ERROR: Admin username and password required');
+        addRow('Admin Tests', 'FAIL', '-', '-', 'Username and password required');
+        return;
+      }
+
+      const credentials = {
+        admin_username: username,
+        admin_password: password
+      };
+
+      log('Testing admin authentication...');
+
+      // Test login
+      const loginSuccess = await testAdminRoute('Admin Login (route=admin_login)', 'admin_login', credentials);
+      
+      if (!loginSuccess) {
+        log('Admin login failed - skipping other admin routes');
+        return;
+      }
+
+      // Test protected routes
+      await testAdminRoute('Admin Products List (route=admin_products_list)', 'admin_products_list', credentials);
+      await testAdminRoute('Admin Orders List (route=admin_orders_list)', 'admin_orders_list', credentials, { limit: 50 });
+      await testAdminRoute('Admin Settings List (route=admin_settings_list)', 'admin_settings_list', credentials);
+
+      log('Admin route tests complete.');
+    }
+
     runBtn.addEventListener('click', runDiagnostics);
+    document.getElementById('testAdminBtn').addEventListener('click', testAdminRoutes);
   </script>
 </body>
 </html>

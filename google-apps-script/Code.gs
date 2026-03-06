@@ -151,6 +151,12 @@ function doPost(e) {
         return handleAdminSettingsList(payload);
       case 'admin_settings_upsert':
         return handleAdminSettingsUpsert(payload);
+      case 'admin_toppings_list':
+        return handleAdminToppingsList(payload);
+      case 'admin_topping_upsert':
+        return handleAdminToppingUpsert(payload);
+      case 'admin_topping_delete':
+        return handleAdminToppingDelete(payload);
       case 'crm_push_order':
         return handleCrmPushOrder(e.parameter.order_id);
       case 'crm_push_booking':
@@ -587,6 +593,80 @@ function handleAdminSettingsUpsert(payload) {
 
   sheet.appendRow([key, value]);
   return jsonResponse(true, { key: key, value: value, action: 'created' });
+}
+
+function handleAdminToppingsList(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  return handleGetToppings();
+}
+
+function handleAdminToppingUpsert(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  if (!payload || !payload.topping || !payload.topping.id) {
+    return jsonResponse(false, null, 'Invalid payload', 'topping with id is required');
+  }
+
+  const topping = payload.topping;
+  const sheet = getSheet('Toppings');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Toppings sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const values = [
+    topping.id.toString().trim(),
+    topping.name || '',
+    topping.description || '',
+    parseFloat(topping.price_inr) || 0,
+    topping.icon_emoji || '🎂',
+    parseBoolean(topping.is_available),
+    parseInt(topping.sort_order, 10) || 0,
+  ];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === values[0]) {
+      sheet.getRange(i + 1, 1, 1, values.length).setValues([values]);
+      return jsonResponse(true, { id: values[0], action: 'updated' });
+    }
+  }
+
+  sheet.appendRow(values);
+  return jsonResponse(true, { id: values[0], action: 'created' });
+}
+
+function handleAdminToppingDelete(payload) {
+  const access = validateAdminAccess(payload || {});
+  if (!access.ok) {
+    return jsonResponse(false, null, 'Unauthorized', access.error);
+  }
+
+  if (!payload || !payload.id) {
+    return jsonResponse(false, null, 'Invalid payload', 'id is required');
+  }
+
+  const id = payload.id.toString();
+  const sheet = getSheet('Toppings');
+  if (!sheet) {
+    return jsonResponse(false, null, 'Toppings sheet not found');
+  }
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === id) {
+      sheet.deleteRow(i + 1);
+      return jsonResponse(true, { id: id, action: 'deleted' });
+    }
+  }
+
+  return jsonResponse(false, null, 'Topping not found');
 }
 
 function handleCreateOrder(payload) {

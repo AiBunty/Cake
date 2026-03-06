@@ -256,3 +256,23 @@ export const adminUpsertSetting = async (credentials: AdminCredentials, key: str
     body: JSON.stringify({ ...credentials, key, value }),
   });
 };
+export const adminListToppings = async (credentials: AdminCredentials) => {
+  return appsScriptFetch("admin_toppings_list", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+};
+
+export const adminUpsertTopping = async (credentials: AdminCredentials, topping: unknown) => {
+  return appsScriptFetch("admin_topping_upsert", {
+    method: "POST",
+    body: JSON.stringify({ ...credentials, topping }),
+  });
+};
+
+export const adminDeleteTopping = async (credentials: AdminCredentials, id: string) => {
+  return appsScriptFetch("admin_topping_delete", {
+    method: "POST",
+    body: JSON.stringify({ ...credentials, id }),
+  });
+};
